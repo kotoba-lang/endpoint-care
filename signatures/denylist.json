@@ -1,0 +1,6 @@
+{
+  "schema": "kotoba.endpoint-care.denylist.v1",
+  "algorithm": "sha256",
+  "entries": [],
+  "note": "Ships empty by design: an empty denylist must never read as 'clean'. Engine integration (ClamAV / YARA) is roadmap; until then HashCheck reports status=unavailable with compared counts."
+}

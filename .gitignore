@@ -1,0 +1,16 @@
+# Build output
+/bin/
+/endpoint-care
+*.exe
+*.exe~
+*.test
+*.out
+
+# Coverage
+coverage.*
+coverage/
+cover.out
+
+# Editor / OS noise
+.DS_Store
+*.swp
