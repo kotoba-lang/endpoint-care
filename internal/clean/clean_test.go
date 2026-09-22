@@ -1,6 +1,46 @@
 package clean
 
-import "testing"
+import (
+	"path/filepath"
+	"testing"
+)
+
+func TestKeepUnderHomeGuard(t *testing.T) {
+	h := home()
+	if h == "" {
+		t.Fatal("no home dir")
+	}
+	in := []string{
+		filepath.Join(h, ".cache", "go-build"), // kept: under home
+		"/var/tmp/anything",                    // dropped: system path
+		filepath.Join(h, "..", "elsewhere"),    // dropped: traversal via clean
+		h,                                      // dropped: home itself is never a root
+		"/",                                    // dropped: filesystem root
+	}
+	got := keepUnderHome(in)
+	want := 1
+	if len(got) != want {
+		t.Fatalf("keepUnderHome kept %d roots %v, want %d", len(got), got, want)
+	}
+	if got[0] != filepath.Clean(filepath.Join(h, ".cache", "go-build")) {
+		t.Errorf("kept %q", got[0])
+	}
+}
+
+func TestWhitelistIsPlatformScoped(t *testing.T) {
+	wl := whitelist()
+	if len(wl) == 0 {
+		t.Skip("platform not verified — empty whitelist is the safe default")
+	}
+	for _, w := range wl {
+		if _, bad := isProtected(w); bad {
+			t.Errorf("whitelist root %s is also protected", w)
+		}
+		if w == filepath.Clean(home()) {
+			t.Errorf("home itself must never be a root")
+		}
+	}
+}
 
 func TestProtectedPathsRefused(t *testing.T) {
 	// protectedPrefixes() is anchored at the real home dir — build fixtures

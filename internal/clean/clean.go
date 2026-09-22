@@ -27,20 +27,22 @@ type Entry struct {
 
 // Plan is the JSON document `clean` prints.
 type Plan struct {
-	Mode          string  `json:"mode"` // dry-run | apply
+	Mode          string   `json:"mode"` // dry-run | apply
 	WhitelistRoot []string `json:"whitelist_roots"`
-	Candidates    []Entry `json:"candidates"`
-	EligibleBytes uint64  `json:"eligible_bytes"`
-	FreedBytes    uint64  `json:"freed_bytes"`
-	DeletedCount  int     `json:"deleted_count"`
-	RefusedCount  int     `json:"refused_count"`
-	Note          string  `json:"note"`
+	Candidates    []Entry  `json:"candidates"`
+	EligibleBytes uint64   `json:"eligible_bytes"`
+	FreedBytes    uint64   `json:"freed_bytes"`
+	DeletedCount  int      `json:"deleted_count"`
+	RefusedCount  int      `json:"refused_count"`
+	Note          string   `json:"note"`
 }
 
 // protectedPrefixes are never deleted regardless of whitelist membership.
+// The OS-file additions go through keepUnderHome too: a relocated protected
+// dir must not become a global prefix either.
 func protectedPrefixes() []string {
 	home := home()
-	return []string{
+	base := []string{
 		filepath.Join(home, "Documents"),
 		filepath.Join(home, "Downloads"),
 		filepath.Join(home, "Desktop"),
@@ -50,6 +52,7 @@ func protectedPrefixes() []string {
 		filepath.Join(home, ".aws"),
 		filepath.Join(home, ".gnupg"),
 	}
+	return append(keepUnderHome(base), keepUnderHome(osProtected())...)
 }
 
 func home() string {
@@ -60,25 +63,36 @@ func home() string {
 	return h
 }
 
-// whitelist returns the fixed roots this version may clean. macOS-focused
-// today; linux/windows roots are added per-platform as they are verified —
-// never by widening a glob.
+// whitelist returns the fixed roots this version may clean. The roots are
+// per-platform and verified on that platform's own cache layout —
+// never by widening a glob. keepUnderHome is the cross-platform guard:
+// every root must live under the current user's home directory, so an env
+// var pointing elsewhere (XDG_CACHE_HOME, LOCALAPPDATA) or an exotic user
+// layout can never turn a system path into a cleanup candidate.
 func whitelist() []string {
 	home := home()
 	if home == "" {
 		return nil
 	}
-	caches := filepath.Join(home, "Library", "Caches")
-	return []string{
-		filepath.Join(caches, "go-build"),
-		filepath.Join(caches, "node-gyp"),
-		filepath.Join(caches, "pnpm"),
-		filepath.Join(caches, "electron"),
-		filepath.Join(caches, "pip"),
-		filepath.Join(caches, "deno"),
-		filepath.Join(caches, "org.swift.swiftpm"),
-		filepath.Join(home, "Library", "Logs"),
+	return keepUnderHome(osWhitelist())
+}
+
+// keepUnderHome drops roots that are not strictly under the user's home.
+// filepath.Clean resolves ".." segments so a crafted env path cannot sneak
+// a parent traversal through the prefix test.
+func keepUnderHome(roots []string) []string {
+	h := filepath.Clean(home())
+	if h == "" || h == "." || h == string(filepath.Separator) {
+		return nil
 	}
+	out := make([]string, 0, len(roots))
+	for _, r := range roots {
+		r = filepath.Clean(r)
+		if r != h && strings.HasPrefix(r, h+string(filepath.Separator)) {
+			out = append(out, r)
+		}
+	}
+	return out
 }
 
 // isProtected reports whether path sits under a protected prefix.
