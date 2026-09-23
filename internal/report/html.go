@@ -38,6 +38,7 @@ var htmlTmpl = template.Must(template.New("report").Funcs(funcMap).Parse(`<!doct
  .chip{font-size:.7rem;border:1px solid #ccc;border-radius:999px;padding:.1rem .55rem;color:#555}
  .chip.ok{border-color:#2c2;background:#efe;color:#171}
  .chip.error,.chip.unsupported,.chip.unavailable{border-color:#c33;background:#fee;color:#922}
+ .chip.refused{border-color:#c33;background:#fcc;color:#800;font-weight:bold}
  .csf{font-size:.75rem;color:#777}
  .note{font-size:.85rem;color:#777}
  .bar{display:flex;align-items:center;gap:.5rem;font-size:.8rem;margin:.15rem 0}

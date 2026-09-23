@@ -23,7 +23,9 @@ type Finding struct {
 
 // Section is one measured area of the host.
 //
-//	Status:   ok | error | unsupported | unavailable
+//	Status:   ok | error | unsupported | unavailable | refused
+//	  refused = the check itself declined to grade the input (e.g. a denylist
+//	  that could not be trusted); it is neither ok nor unavailable.
 //	Measured: true only when data was actually collected this run.
 type Section struct {
 	CSF      []string  `json:"csf"`
