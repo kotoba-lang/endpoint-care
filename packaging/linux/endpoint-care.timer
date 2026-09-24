@@ -1,0 +1,13 @@
+# endpoint-care.timer — daily scan schedule for the oneshot service
+
+[Unit]
+Description=Run endpoint-care audit daily
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+# Jitter so a fleet does not stampede any shared verdict feed at once.
+RandomizedDelaySec=1800
+
+[Install]
+WantedBy=timers.target
