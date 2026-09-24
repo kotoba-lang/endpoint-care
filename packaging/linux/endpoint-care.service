@@ -1,0 +1,39 @@
+# endpoint-care scan service (oneshot, driven by endpoint-care.timer)
+#
+# Invariants (ADR-2609221849):
+#   - Outbound only. This unit opens NO listening sockets and needs no
+#     inbound firewall rules. The binary has no server mode.
+#   - No credentials are read. The unit runs as a dynamic system user with
+#     read-only access to the filesystem paths it inventories.
+#   - A scan that could not run never reports clean: endpoint-care exits
+#     non-zero when probes were denied, and a oneshot unit that exits
+#     non-zero is recorded as failed by systemd itself. (There is no
+#     FailureExitCode= directive in systemd; success/failure here comes
+#     from the exit status alone.)
+
+[Unit]
+Description=endpoint-care local hygiene scan (oneshot)
+Documentation=https://github.com/kotoba-lang/endpoint-care
+After=local-fs.target
+
+[Service]
+Type=oneshot
+# audit is read-only evidence collection: disk usage, listening sockets,
+# process inventory, denylist hash check. It never deletes anything.
+ExecStart=/usr/local/bin/endpoint-care audit
+# Fail-closed: a denied probe must leave a failed unit behind, not a green one.
+FailureExitCode=1
+User=endpoint-care
+DynamicUser=yes
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=yes
+RestrictAddressFamilies=AF_UNIX AF_INET
+IPAddressDeny=any
+# IPAddressDeny=any is correct for today's audit path: audit performs no
+# network egress. If a verdict feed (aratame) is wired in later, this line
+# must be replaced with an explicit outbound allowlist, never removed.
+
+[Install]
+WantedBy=multi-user.target
